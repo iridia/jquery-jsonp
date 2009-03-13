@@ -1,0 +1,156 @@
+<html>
+ <head>
+  <script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.3.2/jquery.min.js"></script>
+  <script type="text/javascript" src="../core/jquery.jsonp.js"></script>
+ </head>
+ <body>
+  <h2>Test page for jquery.jsonp.js by Julian Aubourg</h2>
+  <p>This page calls the data api provided by YouTube to get publicly available user profiles and extract the age of the user.</p>
+  <h3>jQuery.jsonp:</h3>
+  <ul>
+   <li><button class="new" id="new-julianaubourg">Julian</button></li>
+   <li><button class="new" id="new-dcibishtho0djj77">A non existing user</button></li>
+   <li><input id="new-dUser-input" type="text" value="" /><button class="new dynamic" id="new-dUser">The user you typed</button></li>
+   <li><a class="playlist new">Invalid playlist</a></li>
+   <li><button class="all" id="new">Do all of the above</button></li>
+  </ul>
+  <h3>jQuery.getJSON:</h3>
+  <ul>
+   <li><button class="old" id="old-julianaubourg">Julian</button></li>
+   <li><button class="old" id="old-dcibishtho0djj77">A non existing user</button></li>
+   <li><input id="old-dUser-input" type="text" value="" /><button class="old dynamic" id="old-dUser">The user you typed</button></li>
+   <li><a class="playlist old">Invalid playlist</a></li>
+   <li><button class="all" id="old">Do all of the above</button></li>
+  </ul>
+  <script>//<!--
+  function dataFilter(json) {
+  	var age = json.entry.yt$age;
+  	var gender = json.entry.yt$gender;
+  	return {
+  		"age": age!==undefined?age.$t:undefined,
+  		"gender": gender!==undefined?gender.$t:undefined
+  	}
+  }
+  function success(user,json) {
+    if (json.age!==undefined) {
+       alert(user+" is "+json.age+" years old");
+    } else if (json.gender!==undefined) {
+       var isFemale = (json.gende =="f");
+       alert(user+" does not share "+(isFemale?"her":"his")+" age");
+    } else {
+       alert(user+" does not share age and gender");
+    }
+  }
+  function newGetYouTubeUserAge(button,user,pageCache) {
+    button.attr("disabled","disabled");
+    $.jsonp({
+    	"url": "http://gdata.youtube.com/feeds/api/users/"+user+"?callback=?",
+      	"data": {
+        	"alt": "json-in-script"
+      	},
+      	"dataFilter": dataFilter,
+     	"success": function(json) {
+        	success(user,json);
+	        button.removeAttr("disabled");
+	    },
+	    "error": function(d,msg) {
+	        alert("ERROR: '"+msg+"' => "+user+" was not found or YouTube is not responding");
+	        button.removeAttr("disabled");
+      	},
+      	"pageCache": pageCache
+    });
+  }
+  function oldGetYouTubeUserAge(button,user) {
+    button.attr("disabled","disabled");
+    $.ajax({
+        "url": "http://gdata.youtube.com/feeds/api/users/"+user+"?callback=?",
+      	"data": {
+        	"alt": "json-in-script"
+      	},
+      	"dataType": "json",
+     	"success": function(json) {
+        	success(user,dataFilter(json));
+	        button.removeAttr("disabled");
+	    },
+	    "error": function(msg) {
+	        alert("ERROR: '"+msg+"' => "+user+" was not found or YouTube is not responding");
+	        button.removeAttr("disabled");
+      	}
+    });
+  }
+  function newPlayList() {
+  	$.jsonp({
+  		"url": "http://gdata.youtube.com/feeds/api/playlists/X7877YHUJ?alt=json-in-script&callback=myOwn",
+  		"callback": "myOwn",
+  		"success": function() {
+  			alert("The playlist exists!");
+  		},
+  		"error": function(d,status) {
+  			if (status=="timeout") alert("request has been timedout")
+  			else alert("The playlist does not exist!");
+  		}
+  	});
+  }
+  function oldPlayList() {
+  	$.getJSON(
+  		"http://gdata.youtube.com/feeds/api/playlists/X7877YHUJ?alt=json-in-script&callback=?",
+		function() {
+  			alert("The playlist exists!");
+  		}
+  	);
+  }
+  $.each($("button"), function() {
+    var element = $(this);
+    var id = element.attr("id");
+    var type = id.substr(0,3);
+    var getFunction = window[type+"GetYouTubeUserAge"];
+    if (element.hasClass("dynamic")) {
+      element.click(function() {
+        var userName = $("#"+id+"-input").val();
+        if (userName=="") {
+          alert("Please enter a username");
+          return;
+        }
+        getFunction(element,userName,true);
+      });
+    } else if (element.hasClass("all")) {
+      element.click(function() {
+        $("."+type).click();
+      });
+    } else {
+      var userName = id.substr(4);
+      element.click(function() {
+        getFunction(element,userName);
+      });
+    }
+  });
+  $("a.playlist").css("cursor","pointer").click(function(){
+  	if ($(this).hasClass("new")) {
+  		newPlayList();
+  	} else {
+  		oldPlayList();
+  	}
+  });
+  // Cache test
+  var url = "http://gdata.youtube.com/feeds/api/playlists/5B740A0FD9A0779E?alt=json-in-script&callback=?";
+  $.ajax({
+  	"url": url,
+  	"dataType": "json",
+  	"cache": true
+  });
+  $.ajax({
+  	"url": url,
+  	"dataType": "json",
+  	"cache": true
+  });
+  $.jsonp({
+  	"url":url,
+  	"cache": true
+  });
+  $.jsonp({
+  	"url":url,
+  	"cache": true
+  });
+  //--></script>
+ </body>
+</html>
