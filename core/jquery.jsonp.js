@@ -25,8 +25,9 @@
 		//beforeSend: undefined,
 		//cache: false,
 		callback: "C",
-		//dataFilter: undefined,
 		//complete: undefined,
+		//data: ""
+		//dataFilter: undefined,
 		//error: undefined,
 		//pageCache: false,
 		//success: undefined,
