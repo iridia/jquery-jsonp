@@ -1,5 +1,5 @@
 /*
- * jQuery JSONP Core Plugin 1.0 (2009-03-13)
+ * jQuery JSONP Core Plugin 1.0.1 (2009-03-15)
  * 
  * http://code.google.com/p/jquery-jsonp/
  *
@@ -25,6 +25,7 @@
 		//beforeSend: undefined,
 		//cache: false,
 		callback: "C",
+		//callbackParameter: undefined,
 		//complete: undefined,
 		//data: ""
 		//dataFilter: undefined,
@@ -55,6 +56,9 @@
 		var s = (typeof p)=="string";
 		// Convert parameters to string if needs be
 		p = s?p:$.param(p);
+		// Add callback parameter if provided as option
+		x(d.callbackParameter)
+			&& (p += (p==""?"":"&")+escape(d.callbackParameter)+"=?");
 		// Add anticache parameter if needed
 		!d.cache && !d.pageCache
 			&& (p += [(p==""?"":"&"),"_xx",(new Date()).getTime(),"=",1].join(""));
@@ -69,7 +73,7 @@
 				S[j] += "&" + P[0];
 				P.shift();
 			}
-			S.concat(P);
+			S = S.concat(P);
 		}
 		// If more than 2 ? replace the last one by the callback
 		var i = S.length-1;
