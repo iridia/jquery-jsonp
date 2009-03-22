@@ -1,5 +1,5 @@
 /*
- * jQuery JSONP Core Plugin 1.0.2 (2009-03-22)
+ * jQuery JSONP Core Plugin 1.0.3 (2009-03-22)
  * 
  * http://code.google.com/p/jquery-jsonp/
  *
@@ -152,11 +152,11 @@
 				x(d.complete) && d.complete(d,"success");
 			},1);
 		};
-		W[E] = function() {
+		W[E] = function(s) {
 			// If not treated, mark
 			// then give hand back to iframe
 			// for it to finish gracefully
-			!t++ && setTimeout(function(){e();},1);
+			(!s || s=="complete") && !t++ && setTimeout(function(){e();},1);
 		};
 		// Clean up function (declaration)
 		w = function() {
@@ -173,13 +173,13 @@
 		// We let the hand to current code to avoid
 		// pre-emptive callbacks
 		setTimeout(function() {
-			D.write(
-				['<html><head><script src="',
-				 U,
-				 '"></script><script>',
-				 E,'()</script></head><body onload="',
-				 E,'()" onerror="',
-				 E,'()"></body></html>'].join("")
+			D.write([
+			'<html><head><script src="',
+			U,'" onload="',
+			E,'()" onreadystatechange="',
+			E,'(this.readyState)"></script></head><body onload="',
+			E,'()"></body></html>'
+			].join("")
 			);
 			// Close (makes some browsers happier)
 			D.close();
