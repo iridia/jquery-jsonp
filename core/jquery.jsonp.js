@@ -1,5 +1,5 @@
 /*
- * jQuery JSONP Core Plugin 1.0.1 (2009-03-15)
+ * jQuery JSONP Core Plugin 1.0.2 (2009-03-22)
  * 
  * http://code.google.com/p/jquery-jsonp/
  *
@@ -174,12 +174,12 @@
 		// pre-emptive callbacks
 		setTimeout(function() {
 			D.write(
-				['<html><head><script type="text/javascript" src="',
+				['<html><head><script src="',
 				 U,
-				 '" /><script type="text/javascript">',
+				 '"></script><script>',
 				 E,'()</script></head><body onload="',
 				 E,'()" onerror="',
-				 E,'()" /></html>'].join("")
+				 E,'()"></body></html>'].join("")
 			);
 			// Close (makes some browsers happier)
 			D.close();
