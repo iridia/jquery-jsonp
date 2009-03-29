@@ -1,5 +1,5 @@
 /*
- * jQuery JSONP Core Plugin 1.0.3 (2009-03-22)
+ * jQuery JSONP Core Plugin 1.0.4 (2009-03-29)
  * 
  * http://code.google.com/p/jquery-jsonp/
  *
@@ -12,16 +12,15 @@
 	
 	// ###################### UTILITIES ##
 	// Test a value is neither undefined nor null
-	function x(o) {
-		return o!==undefined && o!==null;
-	}
+	var x = function(o) { return o!==undefined && o!==null; },
+	
 	// Head element
-	var H = $("head");
+	H = $("head"),
 	// Page cache
-	var Z = {};
+	Z = {},
 	
 	// ###################### DEFAULT OPTIONS ##
-	var K = {
+	K = {
 		//beforeSend: undefined,
 		//cache: false,
 		callback: "C",
@@ -51,56 +50,58 @@
 		}
 		
 		// Control entries & data type
-		var u = x(d.url)?d.url:"";
-		var p = x(d.data)?d.data:"";
-		var s = (typeof p)=="string";
+		// + declare variables
+		var _="",
+		y = "success",
+		n = "error",
+		u = x(d.url)?d.url:_,
+		p = x(d.data)?d.data:_,
+		s = (typeof p)=="string",
+		// Keep hand to running thread
+		k = function(f) { setTimeout(f,1); },
+		// Various variable
+		S,P,i,j,U;
 		// Convert parameters to string if needs be
 		p = s?p:$.param(p);
 		// Add callback parameter if provided as option
 		x(d.callbackParameter)
-			&& (p += (p==""?"":"&")+escape(d.callbackParameter)+"=?");
+			&& (p += (p==_?_:"&")+escape(d.callbackParameter)+"=?");
 		// Add anticache parameter if needed
 		!d.cache && !d.pageCache
-			&& (p += [(p==""?"":"&"),"_xx",(new Date()).getTime(),"=",1].join(""));
+			&& (p += [(p==_?_:"&"),"_xx",(new Date()).getTime(),"=",1].join(_));
 		// Search for ? in url
-		var S = u.split("?");
+		S = u.split("?");
 		// Also in parameters if provided
 		// (and merge array)
-		if (p!="") {
-			var P = p.split("?");
-			var j = S.length-1;
-			if (j>0) {
-				S[j] += "&" + P[0];
-				P.shift();
-			}
+		if (p!=_) {
+			P = p.split("?");
+			j = S.length-1;
+			j && (S[j] += "&" + P.shift());
 			S = S.concat(P);
 		}
 		// If more than 2 ? replace the last one by the callback
-		var i = S.length-1;
-		if (i>1) {
-			S[i-1] += d.callback + S[i];
-			S.pop();
-		}
+		i = S.length-2;
+		i && (S[i] += d.callback + S.pop());
 		// Build the url
-		var U = S.join("?");
+		U = S.join("?");
 		
 		// Check page cache
 		if (d.pageCache && x(Z[U])) {
-			setTimeout(function() {
+			k(function() {
 				// If an error was cached
 				if (x(Z[U].e)) {
 					// Call error then complete
-					x(d.error) && d.error(d,"error");
-					x(d.complete) && d.complete(d,"error");
+					x(d.error) && d.error(d,n);
+					x(d.complete) && d.complete(d,n);
 				} else {
 					var v = Z[U].s;
 					// Apply the data filter if provided
 					x(d.dataFilter) && (v = d.dataFilter(v));
 					// Call success then complete
-					x(d.success) && d.success(v,"success");
-					x(d.complete) && d.complete(d,"success");				
+					x(d.success) && d.success(v,y);
+					x(d.complete) && d.complete(d,y);				
 				}
-			},1);
+			});
 			return d;
 		}
 		
@@ -108,31 +109,31 @@
 		var f = $("<iframe />");
 		H.append(f);
 		// Get the iframe's window and document objects
-		var F = f[0];
-		var W = F.contentWindow || F.contentDocument;
-		var D = W.document;
+		var F = f[0],
+		W = F.contentWindow || F.contentDocument,
+		D = W.document;
 		if(!x(D)) {
 			D = W;
 		    W = D.getParentNode();
 		}
 		// Cleanup function (reference)
-		var w;
+		var w,
 		// Error function
-		function e(m) {
+		e = function (_,m) {
 			// If pure error, cache if needed
 			d.pageCache && !x(m) && (Z[U] = {e: 1}); 
 			// Cleanup
 			w();
 			// Call error then complete
-			m = x(m)?m:"error";
+			m = x(m)?m:n;
 			x(d.error) && d.error(d,m);
 			x(d.complete) && d.complete(d,m);
-		}
+		},
 		// Flag to know if the request has been treated
-		var t = 0;
+		t = 0,
 		// Install callbacks
-		var C = d.callback;
-		var E = C=="E"?"X":"E";
+		C = d.callback,
+		E = C=="E"?"X":"E";
 		D.open(); // We have to open the document before
 				  // declaring variables in the iframe's window
 				  // Don't ask me why, I have no clue
@@ -142,21 +143,21 @@
 			d.pageCache && (Z[U] = {s: v});
 			// Give hand back to frame
 			// To finish gracefully
-			setTimeout(function(){
+			k(function(){
 				// Cleanup
 				w();
 				// Apply the data filter if provided
 				x(d.dataFilter) && (v = d.dataFilter(v));
 				// Call success then complete
-				x(d.success) && d.success(v,"success");
-				x(d.complete) && d.complete(d,"success");
-			},1);
+				x(d.success) && d.success(v,y);
+				x(d.complete) && d.complete(d,y);
+			});
 		};
 		W[E] = function(s) {
 			// If not treated, mark
 			// then give hand back to iframe
 			// for it to finish gracefully
-			(!s || s=="complete") && !t++ && setTimeout(function(){e();},1);
+			(!s || s=="complete") && !t++ && k(e);
 		};
 		// Clean up function (declaration)
 		w = function() {
@@ -165,29 +166,29 @@
 			try { delete W[E]; } catch(_) {}
 			try { delete W[C]; } catch(_) {}
 			D.open()
-			D.write("");
+			D.write(_);
 			D.close();
 			f.remove();
 		}
 		// Write to the iframe (sends the request)
 		// We let the hand to current code to avoid
 		// pre-emptive callbacks
-		setTimeout(function() {
+		k(function() {
 			D.write([
 			'<html><head><script src="',
 			U,'" onload="',
 			E,'()" onreadystatechange="',
 			E,'(this.readyState)"></script></head><body onload="',
 			E,'()"></body></html>'
-			].join("")
+			].join(_)
 			);
 			// Close (makes some browsers happier)
 			D.close();
-		},1);
+		});
 		
 		// If a timeout is needed, install it
 		d.timeout>0 && setTimeout(function(){
-				!t && e("timeout");
+				!t && e(_,"timeout");
 		},d.timeout);
 		
 		// Install abort to emulate xhr
