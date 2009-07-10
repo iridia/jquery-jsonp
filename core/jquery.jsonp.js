@@ -1,5 +1,5 @@
 /*
- * jQuery JSONP Core Plugin 1.0.4 (2009-03-29)
+ * jQuery JSONP Core Plugin 1.0.5 (2009-07-10)
  * 
  * http://code.google.com/p/jquery-jsonp/
  *
@@ -12,15 +12,17 @@
 	
 	// ###################### UTILITIES ##
 	// Test a value is neither undefined nor null
-	var x = function(o) { return o!==undefined && o!==null; },
+	var defined = function(v) {
+		return v!==undefined && v!==null;
+	},
 	
-	// Head element
-	H = $("head"),
+	// Head element (for faster use)
+	head = $("head"),
 	// Page cache
-	Z = {},
+	pageCache = {},
 	
 	// ###################### DEFAULT OPTIONS ##
-	K = {
+	xOptionsDefaults = {
 		//beforeSend: undefined,
 		//cache: false,
 		callback: "C",
@@ -33,175 +35,224 @@
 		//success: undefined,
 		//timeout: 0,		
 		url: location.href
-	};
+	},
 
 	// ###################### MAIN FUNCTION ##
-	$.jsonp = function(d) {
+	jsonp = function(xOptions) {
 		
 		// Build data with default
-		d = $.extend({},K,d);
+		xOptions = $.extend({},xOptionsDefaults,xOptions);
+		
+		var beforeSendCallback = xOptions.beforeSend;
 
 		// Call beforeSend if provided
 		// (early abort if false returned)
-		if (x(d.beforeSend)) {
-			var t = 0;
-			d.abort = function() { t = 1; };
-			if (d.beforeSend(d,d)===false || t) return d;
+		if (defined(beforeSendCallback)) {
+			var aborted = 0;
+			xOptions.abort = function() { aborted = 1; };
+			if (beforeSendCallback(xOptions,xOptions)===false || aborted) return xOptions;
 		}
 		
 		// Control entries & data type
 		// + declare variables
-		var _="",
-		y = "success",
-		n = "error",
-		u = x(d.url)?d.url:_,
-		p = x(d.data)?d.data:_,
-		s = (typeof p)=="string",
-		// Keep hand to running thread
-		k = function(f) { setTimeout(f,1); },
+		var
+		empty="",
+		amp="&",
+		qMark="?",
+		success = "success",
+		error = "error",
+		
+		successCallback = xOptions.success,
+		completeCallback = xOptions.complete,
+		errorCallback = xOptions.error,
+		
+		dataFilter = xOptions.dataFilter,
+		
+		callbackParameter = xOptions.callbackParameter,
+		
+		successCallbackName = xOptions.callback,
+
+		cacheFlag = xOptions.cache,
+		pageCacheFlag = xOptions.pageCache,
+		
+		url = xOptions.url,
+		data = xOptions.data,
+		
+		timeout = xOptions.timeout,
+		
+		// Keep current thread running
+		later = function(functor) { setTimeout(functor,1); },
+		
 		// Various variable
-		S,P,i,j,U;
-		// Convert parameters to string if needs be
-		p = s?p:$.param(p);
+		splitUrl,splitData,i,j;
+
+		// Control entries
+		url = defined(url)?url:empty;
+		data = defined(data)?((typeof data)=="string"?data:$.param(data)):empty;
+		
 		// Add callback parameter if provided as option
-		x(d.callbackParameter)
-			&& (p += (p==_?_:"&")+escape(d.callbackParameter)+"=?");
+		defined(callbackParameter)
+			&& (data += (data==empty?empty:amp)+escape(callbackParameter)+"=?");
+		
 		// Add anticache parameter if needed
-		!d.cache && !d.pageCache
-			&& (p += [(p==_?_:"&"),"_xx",(new Date()).getTime(),"=",1].join(_));
+		!cacheFlag && !pageCacheFlag
+			&& (data += (data==empty?empty:amp)+"_"+(new Date()).getTime()+"=");
+		
 		// Search for ? in url
-		S = u.split("?");
+		splitUrl = url.split(qMark);
 		// Also in parameters if provided
 		// (and merge array)
-		if (p!=_) {
-			P = p.split("?");
-			j = S.length-1;
-			j && (S[j] += "&" + P.shift());
-			S = S.concat(P);
+		if (data!=empty) {
+			splitData = data.split(qMark);
+			j = splitUrl.length-1;
+			j && (splitUrl[j] += amp + splitData.shift());
+			splitUrl = splitUrl.concat(splitData);
 		}
 		// If more than 2 ? replace the last one by the callback
-		i = S.length-2;
-		i && (S[i] += d.callback + S.pop());
-		// Build the url
-		U = S.join("?");
+		i = splitUrl.length-2;
+		i && (splitUrl[i] += successCallbackName + splitUrl.pop());
+		
+		// Build the final url
+		var finalUrl = splitUrl.join(qMark),
+		
+		// Utility function
+		notifySuccess = function(json) {
+			// Apply the data filter if provided
+			defined(dataFilter) && (json = dataFilter(json));
+			// Call success then complete
+			defined(successCallback) && successCallback(json,success);
+			defined(completeCallback) && completeCallback(xOptions,success);				
+		},
+	    notifyError = function(type) {
+			// Call error then complete
+			defined(errorCallback) && errorCallback(xOptions,type);
+			defined(completeCallback) && completeCallback(xOptions,type);
+	    },
+	    
+	    // Get from pageCache
+	    pageCached = pageCache[finalUrl];
 		
 		// Check page cache
-		if (d.pageCache && x(Z[U])) {
-			k(function() {
+		if (pageCacheFlag && defined(pageCached)) {
+			later(function() {
 				// If an error was cached
-				if (x(Z[U].e)) {
-					// Call error then complete
-					x(d.error) && d.error(d,n);
-					x(d.complete) && d.complete(d,n);
-				} else {
-					var v = Z[U].s;
-					// Apply the data filter if provided
-					x(d.dataFilter) && (v = d.dataFilter(v));
-					// Call success then complete
-					x(d.success) && d.success(v,y);
-					x(d.complete) && d.complete(d,y);				
-				}
+				if (defined(pageCached.e)) notifyError(error);
+				else notifySuccess(pageCached.s);
 			});
-			return d;
+			return xOptions;
 		}
 		
 		// Create an iframe & add it to the document
-		var f = $("<iframe />");
-		H.append(f);
+		var frame = $("<iframe />").appendTo(head),
+		
 		// Get the iframe's window and document objects
-		var F = f[0],
-		W = F.contentWindow || F.contentDocument,
-		D = W.document;
-		if(!x(D)) {
-			D = W;
-		    W = D.getParentNode();
-		}
-		// Cleanup function (reference)
-		var w,
-		// Error function
-		e = function (_,m) {
-			// If pure error, cache if needed
-			d.pageCache && !x(m) && (Z[U] = {e: 1}); 
-			// Cleanup
-			w();
-			// Call error then complete
-			m = x(m)?m:n;
-			x(d.error) && d.error(d,m);
-			x(d.complete) && d.complete(d,m);
-		},
+		tmp = frame[0],
+		window = tmp.contentWindow || tmp.contentDocument,
+		document = window.document,
+		
 		// Flag to know if the request has been treated
-		t = 0,
+		done = 0,
+		
+		// Declaration of cleanup function
+		cleanup,
+		
+		// Error function
+		errorFunction = function (_,type) {
+			// If pure error (not timeout), cache if needed
+			pageCacheFlag && !defined(type) && (pageCache[finalUrl] = {e: 1}); 
+			// Cleanup
+			cleanUp();
+			// Call error then complete
+			notifyError(defined(type)?type:error);
+		},
+		
+		// Cleaning function
+		removeVariable = function(varName) {
+			window[varName] = undefined;
+			try { delete window[varName]; } catch(_) {}
+		},
+		
+		// Error callback name
+		errorCallbackName = successCallbackName=="E"?"X":"E";
+		
+		// Control if we actually retrieved the document
+		if(!defined(document)) {
+			document = window;
+		    window = document.getParentNode();
+		}
+		
+		// We have to open the document before
+		// declaring variables in the iframe's window
+		// Don't ask me why, I have no clue
+		document.open();
+		
 		// Install callbacks
-		C = d.callback,
-		E = C=="E"?"X":"E";
-		D.open(); // We have to open the document before
-				  // declaring variables in the iframe's window
-				  // Don't ask me why, I have no clue
-		W[C] = function(v) {
+		
+		window[successCallbackName] = function(json) {
 			// Set as treated
-			t = 1;
-			d.pageCache && (Z[U] = {s: v});
+			done = 1;
+			pageCacheFlag && (pageCache[finalUrl] = {s: json});
 			// Give hand back to frame
 			// To finish gracefully
-			k(function(){
+			later(function(){
 				// Cleanup
-				w();
-				// Apply the data filter if provided
-				x(d.dataFilter) && (v = d.dataFilter(v));
+				cleanUp();
 				// Call success then complete
-				x(d.success) && d.success(v,y);
-				x(d.complete) && d.complete(d,y);
+				notifySuccess(json);
 			});
 		};
-		W[E] = function(s) {
+		
+		window[errorCallbackName] = function(state) {
 			// If not treated, mark
 			// then give hand back to iframe
 			// for it to finish gracefully
-			(!s || s=="complete") && !t++ && k(e);
+			(!state || state=="complete") && !done++ && later(errorFunction);
 		};
+		
 		// Clean up function (declaration)
-		w = function() {
-			W[E] = undefined;
-			W[C] = undefined;
-			try { delete W[E]; } catch(_) {}
-			try { delete W[C]; } catch(_) {}
-			D.open()
-			D.write(_);
-			D.close();
-			f.remove();
-		}
+		xOptions.abort = cleanUp = function() {
+			removeVariable(errorCallbackName);
+			removeVariable(successCallbackName);
+			document.open()
+			document.write(empty);
+			document.close();
+			frame.remove();
+		};
+		
 		// Write to the iframe (sends the request)
 		// We let the hand to current code to avoid
 		// pre-emptive callbacks
-		k(function() {
-			D.write([
-			'<html><head><script src="',
-			U,'" onload="',
-			E,'()" onreadystatechange="',
-			E,'(this.readyState)"></script></head><body onload="',
-			E,'()"></body></html>'
-			].join(_)
+		
+		// We also install the timeout here to avoid
+		// timeout before the code has been dumped to the frame
+		// (in case of insanely short timeout values)
+		later(function() {
+			// Write to the document
+			document.write([
+				'<html><head><script src="',
+				finalUrl,'" onload="',
+				errorCallbackName,'()" onreadystatechange="',
+				errorCallbackName,'(this.readyState)"></script></head><body onload="',
+				errorCallbackName,'()"></body></html>'
+			].join(empty)
 			);
 			// Close (makes some browsers happier)
-			D.close();
+			document.close();
+			// If a timeout is needed, install it
+			timeout>0 && setTimeout(function(){
+					!done && errorFunction(empty,"timeout");
+			},timeout);
 		});
 		
-		// If a timeout is needed, install it
-		d.timeout>0 && setTimeout(function(){
-				!t && e(_,"timeout");
-		},d.timeout);
-		
-		// Install abort to emulate xhr
-		// and return object
-		d.abort = w;
-		return d;
+		return xOptions;
 	}
 	
 	// ###################### SETUP FUNCTION ##
-	$.jsonp.setup = function(o) {
-		$.extend(K,o);
+	jsonp.setup = function(xOptions) {
+		$.extend(xOptionsDefaults,xOptions);
 	};
 
-
+	// ###################### INSTALL in jQuery ##
+	$.jsonp = jsonp;
 	
 })(jQuery);

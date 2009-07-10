@@ -131,25 +131,27 @@
   		oldPlayList();
   	}
   });
-  // Cache test
-  var url = "http://gdata.youtube.com/feeds/api/playlists/5B740A0FD9A0779E?alt=json-in-script&callback=?";
-  $.ajax({
-  	"url": url,
-  	"dataType": "json",
-  	"cache": true
-  });
-  $.ajax({
-  	"url": url,
-  	"dataType": "json",
-  	"cache": true
-  });
-  $.jsonp({
-  	"url":url,
-  	"cache": true
-  });
-  $.jsonp({
-  	"url":url,
-  	"cache": true
+  $(document).ready(function() {
+	  // Cache test
+	  var url = "http://gdata.youtube.com/feeds/api/playlists/5B740A0FD9A0779E?alt=json-in-script&callback=?";
+	  $.ajax({
+	  	"url": url,
+	  	"dataType": "json",
+	  	"cache": true
+	  });
+	  $.ajax({
+	  	"url": url,
+	  	"dataType": "json",
+	  	"cache": true
+	  });
+	  $.jsonp({
+	  	"url":url,
+	  	"cache": true
+	  });
+	  $.jsonp({
+	  	"url":url,
+	  	"cache": true
+	  });
   });
   //--></script>
  </body>
