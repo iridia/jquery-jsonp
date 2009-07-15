@@ -1,5 +1,5 @@
 /*
- * jQuery JSONP Core Plugin 1.0.5 (2009-07-10)
+ * jQuery JSONP Core Plugin 1.0.6 (2009-07-15)
  * 
  * http://code.google.com/p/jquery-jsonp/
  *
@@ -154,7 +154,7 @@
 		done = 0,
 		
 		// Declaration of cleanup function
-		cleanup,
+		cleanUp,
 		
 		// Error function
 		errorFunction = function (_,type) {
