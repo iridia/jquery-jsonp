@@ -1,5 +1,5 @@
 /*
- * jQuery JSONP Core Plugin 1.1.0 (2009-10-06)
+ * jQuery JSONP Core Plugin 1.1.1 (2010-01-21)
  * 
  * http://code.google.com/p/jquery-jsonp/
  *
@@ -110,7 +110,7 @@
 		}
 		// If more than 2 ? replace the last one by the callback
 		i = splitUrl.length-2;
-		i && (splitUrl[i] += successCallbackName + splitUrl.pop());
+		i > 0 && (splitUrl[i] += successCallbackName + splitUrl.pop());
 		
 		// Build the final url
 		var finalUrl = splitUrl.join(qMark),
@@ -131,6 +131,8 @@
 	    
 	    // Get from pageCache
 	    pageCached = pageCache[finalUrl];
+		
+		console.log(finalUrl);
 		
 		// Check page cache
 		if (pageCacheFlag && defined(pageCached)) {
