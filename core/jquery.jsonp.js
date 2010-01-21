@@ -3,7 +3,7 @@
  * 
  * http://code.google.com/p/jquery-jsonp/
  *
- * Copyright (c) 2009 Julian Aubourg
+ * Copyright (c) 2010 Julian Aubourg
  *
  * This document is licensed as free software under the terms of the
  * MIT License: http://www.opensource.org/licenses/mit-license.php
