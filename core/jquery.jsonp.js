@@ -1,5 +1,5 @@
 /*
- * jQuery JSONP Core Plugin 1.1.1 (2010-01-21)
+ * jQuery JSONP Core Plugin 1.1.2 (2010-01-28)
  * 
  * http://code.google.com/p/jquery-jsonp/
  *
@@ -131,8 +131,6 @@
 	    
 	    // Get from pageCache
 	    pageCached = pageCache[finalUrl];
-		
-		console.log(finalUrl);
 		
 		// Check page cache
 		if (pageCacheFlag && defined(pageCached)) {
