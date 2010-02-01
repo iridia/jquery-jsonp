@@ -1,5 +1,5 @@
 /*
- * jQuery JSONP Core Plugin 1.1.2 (2010-01-28)
+ * jQuery JSONP Core Plugin 1.1.3 (2010-02-01)
  * 
  * http://code.google.com/p/jquery-jsonp/
  *
@@ -157,7 +157,7 @@
 			if (done) return;
 		
 			// Create an iframe & add it to the document
-			var frame = $("<iframe />").appendTo(head),
+			var frame = $("<iframe style='display:none' />").appendTo(head),
 			
 			// Get the iframe's window and document objects
 			tmp = frame[0],
