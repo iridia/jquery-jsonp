@@ -1,5 +1,5 @@
 /*
- * jQuery JSONP Core Plugin 1.1.3 (2010-02-01)
+ * jQuery JSONP Core Plugin 1.1.4 (2010-04-07)
  * 
  * http://code.google.com/p/jquery-jsonp/
  *
@@ -228,11 +228,11 @@
 				// Clear the timeout (is it exists)
 				clearTimeout(timeoutTimer);
 				// Open the iframes document & clean
-				document.open();
+				// document.open(); <= Do not open because of an history bug in FF 3.6+
 				removeVariable(errorCallbackName);
 				removeVariable(successCallbackName);
-				document.write(empty);
-				document.close();
+				// document.write(empty);
+				// document.close();
 				frame.remove();
 			};
 		
