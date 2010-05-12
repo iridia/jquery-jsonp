@@ -1,5 +1,5 @@
 /*
- * jQuery JSONP Core Plugin 2.0pre (2010-05-11)
+ * jQuery JSONP Core Plugin 2.0pre2 (2010-05-11)
  * 
  * http://code.google.com/p/jquery-jsonp/
  *
@@ -8,30 +8,29 @@
  * This document is licensed as free software under the terms of the
  * MIT License: http://www.opensource.org/licenses/mit-license.php
  */
-( function( $ , window , document , NULL , undefined ) {
+( function( $ , window , undefined ) {
 	
 	// ###################### UTILITIES ##
-
-	// Get the head or documentElement of a document
-	function getHead( document ) {
-		return document.getElementsByTagName( "head" )[ 0 ] || document.documentElement;
+	
+	// Noop
+	function noop() {
 	}
 	
+	// Generic callback for firefox & opera
+	function genericCallback( data ) {
+		jsonp.L = [ data ];
+	}
+
 	// Create a script tag
-	function createScriptTag( document , url , tag ) {
-		tag = document.createElement( STR_SCRIPT );
-		tag.src = url;
+	function createScriptTag( url , tag ) {
+		tag = $( "<script/>" )[ 0 ];
+		if ( url ) tag.src = url;
 		return tag;
 	}
 	
-	// Test a value is neither undefined nor null
-	function defined( v ) {
-		return v !== undefined && v !== NULL;
-	}
-
 	// Call if defined
 	function callIfDefined( method , object , parameters ) {
-		defined( method ) && method[ STR_APPLY ]( object , parameters );
+		method && method[ STR_APPLY ]( object , parameters );
 	}
 	
 	// Give joining character given url
@@ -44,28 +43,27 @@
 		setTimeout( functor , 0 );
 	}	
 	
-	var // Noop
-		noop = $.noop || function() {},
-	
-		// String constants (for better minification)
-		STR_APPEND_CHILD = "appendChild",
+	var // String constants (for better minification)
+		STR_APPEND = "append",
 		STR_APPLY = "apply",
 		STR_EMPTY = "",
 		STR_ERROR = "error",
+		STR_JQUERY_JSONP = "_jqjsp",
 		STR_ONCLICK = "onclick",
 		STR_ONLOAD = "onload",
 		STR_ONREADYSTATECHANGE = "onreadystatechange",
-		STR_SCRIPT = "script",
 		STR_SUCCESS = "success",
 		STR_TIMEOUT = "timeout",
-		STR_WRITE = "write",
+		
+		// Browser detection (I hate it as much as you do)
+		browser = $.browser,
 		
 		// Head element (for faster use)
-		head = $( getHead( document ) ),
+		head = $( $( "head" )[ 0 ] || document.documentElement ),
 		// Page cache
 		pageCache = {},
-		// IE counter
-		countIE = 0,
+		// Counter
+		count = 0,
 		
 		// ###################### DEFAULT OPTIONS ##
 		xOptionsDefaults = {
@@ -118,25 +116,23 @@
 		};
 
 		// Call beforeSend if provided (early abort if false returned)
-		if ( defined( beforeSendCallback )
+		if ( beforeSendCallback
 			&& ( beforeSendCallback( xOptions , xOptions ) === false || done ) ) {
 			return xOptions;
 		}
 			
 		// Control entries
 		url = url || STR_EMPTY;
-		data = defined( data ) ? ( (typeof data) == "string" ? data : $.param( data ) ) : STR_EMPTY;
+		data = data ? ( (typeof data) == "string" ? data : $.param( data ) ) : STR_EMPTY;
 			
 		// Build final url
 		url += data ? ( qMarkOrAmp( url ) + data ) : STR_EMPTY;
 		
 		// Add callback parameter if provided as option
-		defined(callbackParameter)
-			&& ( url += qMarkOrAmp( url ) + escape(callbackParameter) + "=?" );
+		callbackParameter && ( url += qMarkOrAmp( url ) + escape(callbackParameter) + "=?" );
 		
 		// Add anticache parameter if needed
-		! cacheFlag && ! pageCacheFlag
-			&& ( url += qMarkOrAmp( url ) + "_" + ( new Date() ).getTime() + "=" );
+		! cacheFlag && ! pageCacheFlag && ( url += qMarkOrAmp( url ) + "_" + ( new Date() ).getTime() + "=" );
 		
 		// Replace last ? by callback parameter
 		url = url.replace( /=\?(&|$)/ , "=" + successCallbackName + "$1" );
@@ -146,9 +142,9 @@
 			! done++ && later( function() {
 				doCleanUp();
 				// Pagecache if needed
-				pageCacheFlag && ( pageCache [ url ] = { s: json } );
+				pageCacheFlag && ( pageCache [ url ] = { s: [ json ] } );
 				// Apply the data filter if provided
-				defined( dataFilter ) && ( json = dataFilter[ STR_APPLY ]( xOptions , [ json ] ) );
+				dataFilter && ( json = dataFilter[ STR_APPLY ]( xOptions , [ json ] ) );
 				// Call success then complete
 				callIfDefined( xOptions.success , xOptions , [ json , STR_SUCCESS ] );
 				callIfDefined( completeCallback , xOptions , [ xOptions , STR_SUCCESS ] );
@@ -169,79 +165,89 @@
 	    }
 	    
 		// Check page cache
-		if ( pageCacheFlag && defined( pageCached = pageCache[ url ] ) ) {
-			defined( pageCached.s )	? notifySuccess( pageCached.s )	: notifyError( pageCached );
+		if ( pageCacheFlag && ( pageCached = pageCache[ url ] ) ) {
+			pageCached.s ? notifySuccess( pageCached.s[ 0 ] ) : notifyError( pageCached );
 			return xOptions;
 		}
 		
-		// IE: htmlFrom/event trick
-		if ( $.browser.msie ) {
+		// Firefox & Opera: use synchronized script execution
+		if ( browser.mozilla || browser.opera ) {
 			
-			var script = createScriptTag( document , url ),
-				tmp,
-				func;
-			
-			cleanUp = function() {
-				script[ STR_ONREADYSTATECHANGE ] = script[ STR_ONCLICK ] = NULL;
-				$( script ).remove();
-			};
-			
-			initiate = function() {
-				head[ 0 ][ STR_APPEND_CHILD ]( script );
-			};
-			
-			script.type = "text/javascript";
-			script.event = STR_ONCLICK;
-			script.id = script.htmlFor = "-jqsp" + countIE++;
-			
-			script[ STR_ONREADYSTATECHANGE ] = function() {
+			initiate = function( script , result ) {
 				
-				if ( script.readyState == "loaded" ) {
+				var scriptPost = createScriptTag(),
+					numberedCallback = STR_JQUERY_JSONP + count++;
 					
-					if ( func = script[ STR_ONCLICK ] ) {
-						
-						// Install callback
-						tmp = window[ successCallbackName ];
-						
-						window[ successCallbackName ] = notifySuccess;
-						
-						try { func[ STR_APPLY ]( window ); } catch( _ ) {}
-						
-						window[ successCallbackName ] = tmp;
-					}
+				cleanUp = function() {
+					jsonp[ numberedCallback ] = undefined;
+					$( script ).remove();
+					$( scriptPost ).remove();
+				};
+				
+				jsonp[ numberedCallback ] = function() {
+					result = jsonp.L;
+					jsonp.L = undefined;
+					result ? notifySuccess( result[ 0 ] ) : notifyError();
+				};
+				
+				window[ successCallbackName ] = genericCallback;
 					
-					notifyError();
-				}
+				scriptPost.text = "jQuery.jsonp." + numberedCallback + "()";
+				
+				head[ STR_APPEND]( script )[ STR_APPEND ]( scriptPost );
 			};
+		
+		// IE: htmlFrom/event trick
+		} else if ( browser.msie ) {
+			
+			initiate = function( script , tmp , func , headDom ) {
+			
+				cleanUp = function() {
+					script[ STR_ONREADYSTATECHANGE ] = script[ STR_ONCLICK ] = null;
+					$( script ).remove();
+				};
+				
+				script.event = STR_ONCLICK;
+				script.id = script.htmlFor = STR_JQUERY_JSONP + count++;
+				
+				script[ STR_ONREADYSTATECHANGE ] = function() {
+					
+					if ( script.readyState == "loaded" ) {
+						
+						if ( func = script[ STR_ONCLICK ] ) {
+							
+							tmp = window[ successCallbackName ];
+							window[ successCallbackName ] = notifySuccess;
+							
+							try { func[ STR_APPLY ]( window ); } catch( _ ) {}
+							
+							window[ successCallbackName ] = tmp;
+						}
+						
+						notifyError();
+					}
+				};
 			 
-		// Use an iframe for other browsers			
+				// Prevent IE6 <base /> bug
+				// (plus needs to be made in DOM for the trick to work)
+				headDOM = head[ 0 ];
+				headDOM.insertBefore( script , headDOM.firstChild );
+			};
+			
+		// Others: use an iframe
 		} else {
 			
-			initiate = function() {
+			initiate = function( script ) {
 				
 				var // Create an iframe & add it to the document
-					frame = $( "<iframe style='display:none'/>" ).appendTo( head ),
+					frame = $( "<iframe/>" )[ STR_APPEND + "To" ]( head ),
 				
 					// Get the iframe's window and document objects
 					window = frame[ 0 ].contentWindow,
 					document = window.document,
 					
 					// Error callback name
-					errorCallbackName = successCallbackName == "E" ? "X" : "E",
-					
-					// Script creation name
-					scriptCallbackName = successCallbackName == "L" ? "Y" : "L",
-					
-					// Frame writing strings
-					isGecko = $.browser.mozilla,
-					
-					// Script tag
-					tplValues = [
-						isGecko ? STR_EMPTY : scriptCallbackName + "()",
-						isGecko ? scriptCallbackName : errorCallbackName,
-						errorCallbackName
-					], 
-					script = createScriptTag( document , url );
+					errorCallbackName = successCallbackName == "E" ? "X" : "E";
 					
 				// Clean up function
 				cleanUp = function() {
@@ -257,21 +263,8 @@
 				window[ successCallbackName ] = notifySuccess;
 				window[ errorCallbackName ] = notifyError;
 				
-				window[ scriptCallbackName ] = function() {
-					if ( isGecko ) {
-						script[ STR_ONLOAD ] = notifyError;
-						getHead( document )[ STR_APPEND_CHILD ]( script );
-					} else {
-						document[ STR_WRITE ]( script.outerHTML );
-					}
-				};
-				
 				// Write to the document
-				document[ STR_WRITE ](
-					( "<html><head><" + STR_SCRIPT + ">0</" + STR_SCRIPT + "></head><body " + STR_ONLOAD + "='1()' onerror='2()'/></html>" ).replace( /([0-2])/g , function( _ , $1 ) {
-						return tplValues[ 1 * $1 ];
-					} )
-				);
+				document.write( "<html><head>" + script.outerHTML + "</head><body " + STR_ONLOAD + "='" + errorCallbackName + "()'/></html>" );
 				
 				// Close doc
 				document.close();			
@@ -286,13 +279,13 @@
 			
 			doCleanUp = function() {
 				timeoutTimer && clearTimeout( timeoutTimer );
-				cleanUp();
+				later( cleanUp );
 			};
 			
-			initiate();
+			initiate( createScriptTag( url ) );
 			
 			// If a timeout is needed, install it
-			timeoutTimer = timeout && setTimeout( function() {
+			timeoutTimer = timeout > 0 && setTimeout( function() {
 				notifyError( STR_TIMEOUT );
 			} , timeout );
 			
@@ -309,4 +302,4 @@
 	// ###################### INSTALL in jQuery ##
 	$.jsonp = jsonp;
 	
-} )( jQuery , window , document , null );
+} )( jQuery , window );
