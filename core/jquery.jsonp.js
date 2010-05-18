@@ -1,5 +1,5 @@
 /*
- * jQuery JSONP Core Plugin 2.0 (2010-05-15)
+ * jQuery JSONP Core Plugin 2.0.1 (2010-05-18)
  * 
  * http://code.google.com/p/jquery-jsonp/
  *
@@ -198,7 +198,7 @@
 					// IE: onreadystatechange handler
 					script[ STR_ONREADYSTATECHANGE ] = function() {
 					
-						script.readyState == "loaded" && callback();
+						/loaded|complete/.test( script.readyState ) && callback();
 						
 					};
 					
