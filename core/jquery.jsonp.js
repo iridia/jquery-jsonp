@@ -1,5 +1,5 @@
 /*
- * jQuery JSONP Core Plugin 2.0.1 (2010-05-18)
+ * jQuery JSONP Core Plugin 2.0.2 (2010-05-21)
  * 
  * http://code.google.com/p/jquery-jsonp/
  *
@@ -71,7 +71,8 @@
 			//error: undefined,
 			//pageCache: false,
 			//success: undefined,
-			//timeout: 0,		
+			//timeout: 0,
+			//traditional: false,		
 			url: location.href
 		};
 	
@@ -115,7 +116,7 @@
 			
 		// Control entries
 		url = url || STR_EMPTY;
-		data = data ? ( (typeof data) == "string" ? data : $.param( data ) ) : STR_EMPTY;
+		data = data ? ( (typeof data) == "string" ? data : $.param( data , xOptions.traditional ) ) : STR_EMPTY;
 			
 		// Build final url
 		url += data ? ( qMarkOrAmp( url ) + data ) : STR_EMPTY;
