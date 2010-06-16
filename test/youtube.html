@@ -23,7 +23,9 @@
    <li><a class="playlist old">Invalid playlist</a></li>
    <li><button class="all" id="old">Do all of the above</button></li>
   </ul>
-  <script>//<!--
+  <script type="text/javascript">//<!--
+  document.domain = "127.0.0.1";
+  
   function dataFilter(json) {
   	var age = json.entry.yt$age;
   	var gender = json.entry.yt$gender;
@@ -31,7 +33,7 @@
   		"age": age!==undefined?age.$t:undefined,
   		"gender": gender!==undefined?gender.$t:undefined
   	}
-  }
+  };
   function success(user,json) {
     if (json.age!==undefined) {
        alert(user+" is "+json.age+" years old");
@@ -41,8 +43,8 @@
     } else {
        alert(user+" does not share age and gender");
     }
-  }
-  function newGetYouTubeUserAge(button,user,pageCache) {
+  };
+  function newGetYouTubeUserAge(button,user,pageCache,async) {
     button.attr("disabled","disabled");
     $.jsonp({
     	"url": "http://gdata.youtube.com/feeds/api/users/"+user+"?callback=?",
@@ -60,7 +62,7 @@
       	},
       	"pageCache": pageCache
     });
-  }
+  };
   function oldGetYouTubeUserAge(button,user) {
     button.attr("disabled","disabled");
     $.ajax({
@@ -78,7 +80,7 @@
 	        button.removeAttr("disabled");
       	}
     });
-  }
+  };
   function newPlayList() {
   	$.jsonp({
   		"url": "http://gdata.youtube.com/feeds/api/playlists/X7877YHUJ?alt=json-in-script&callback=myOwn",
@@ -91,7 +93,7 @@
   			else alert("The playlist does not exist!");
   		}
   	});
-  }
+  };
   function oldPlayList() {
   	$.getJSON(
   		"http://gdata.youtube.com/feeds/api/playlists/X7877YHUJ?alt=json-in-script&callback=?",
@@ -99,7 +101,7 @@
   			alert("The playlist exists!");
   		}
   	);
-  }
+  };
   $.each($("button"), function() {
     var element = $(this);
     var id = element.attr("id");
