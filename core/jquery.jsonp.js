@@ -1,5 +1,5 @@
 /*
- * jQuery JSONP Core Plugin 2.0.2 (2010-05-21)
+ * jQuery JSONP Core Plugin 2.1.0 (2010-06-16)
  * 
  * http://code.google.com/p/jquery-jsonp/
  *
@@ -42,6 +42,7 @@
 		STR_ERROR = "error",
 		STR_JQUERY_JSONP = "_jqjsp",
 		STR_ON = "on",
+		STR_ONCLICK = STR_ON + "click",
 		STR_ONERROR = STR_ON + STR_ERROR,
 		STR_ONLOAD = STR_ON + "load",
 		STR_ONREADYSTATECHANGE = STR_ON + "readystatechange",
@@ -49,6 +50,9 @@
 		STR_SCRIPT_TAG = "<script/>",
 		STR_SUCCESS = "success",
 		STR_TIMEOUT = "timeout",
+		
+		// Shortcut to jQuery.browser
+		browser = $.browser,
 		
 		// Head element (for faster use)
 		head = $( "head" )[ 0 ] || document.documentElement,
@@ -175,6 +179,7 @@
 					cleanUp = function() {
 						timeoutTimer && clearTimeout( timeoutTimer );
 						script[ STR_ONREADYSTATECHANGE ]
+							= script[ STR_ONCLICK ]
 							= script[ STR_ONLOAD ]
 							= script[ STR_ONERROR ]
 							= null;
@@ -188,33 +193,42 @@
 
 					// Create the script tag
 					script = $( STR_SCRIPT_TAG )[ 0 ];
+					script.id = STR_JQUERY_JSONP + count++;
 					
 					// Callback function
 					function callback( result ) {
+						( script[ STR_ONCLICK ] || noop )();
 						result = lastValue;
 						lastValue = undefined;
 						result ? notifySuccess( result[ 0 ] ) : notifyError( STR_ERROR );
 					}
 										
-					// IE: onreadystatechange handler
-					script[ STR_ONREADYSTATECHANGE ] = function() {
+					// IE: event/htmlFor/onclick trick
+					// One can't rely on proper order for onreadystatechange
+					// We have to sniff since FF doesn't like event & htmlFor... at all
+					if ( browser.msie ) {
+						
+						script.event = STR_ONCLICK;
+						script.htmlFor = script.id;
+						script[ STR_ONREADYSTATECHANGE ] = function() {
+							script.readyState == "loaded" && callback();
+						};
+						
+					// All others: standard handlers
+					} else {					
 					
-						/loaded|complete/.test( script.readyState ) && callback();
+						script[ STR_ONERROR ] = script[ STR_ONLOAD ] = callback;
 						
-					};
-					
-					// All: standard handlers
-					script[ STR_ONERROR ] = script[ STR_ONLOAD ] = callback;
-					
-					$.browser.opera ?
-						
-						// Opera: onerror is not called, use synchronized script execution
-						( ( scriptAfter = $( STR_SCRIPT_TAG )[ 0 ] ).text = "jQuery('#" + ( script.id = STR_JQUERY_JSONP + count++ ) + "')[0]." + STR_ONERROR + "()" )
-						
-						// Firefox: set script as async to avoid blocking scripts
-						: script[ STR_ASYNC ] = STR_ASYNC;
-						
-					;
+						browser.opera ?
+							
+							// Opera: onerror is not called, use synchronized script execution
+							( ( scriptAfter = $( STR_SCRIPT_TAG )[ 0 ] ).text = "jQuery('#" + script.id + "')[0]." + STR_ONERROR + "()" )
+							
+							// Firefox: set script as async to avoid blocking scripts (3.6+ only)
+							: script[ STR_ASYNC ] = STR_ASYNC;
+							
+						;
+					}
 					
 					// Set source
 					script.src = url;
