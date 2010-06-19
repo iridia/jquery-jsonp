@@ -37,9 +37,10 @@ if (!empty($_GET['attempt']))
 
                 $.jsonp({
                     url: "?callback=?&attempt="+attempts[i],
+                    context: $("#compares"),
                     success: function( response ) {
                         var s = (response.attempt != attempts[j]) ? "FAIL" : "OK";
-                        $("#compares").append(
+                        this.append(
                             'Response: ' + response.attempt + ', should be: ' + attempts[j] + ' ' + s + "<br />"
                         )
                     },

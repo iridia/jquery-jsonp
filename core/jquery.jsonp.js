@@ -1,5 +1,5 @@
 /*
- * jQuery JSONP Core Plugin 2.1.0 (2010-06-16)
+ * jQuery JSONP Core Plugin 2.1.1 (2010-06-19)
  * 
  * http://code.google.com/p/jquery-jsonp/
  *
@@ -28,7 +28,7 @@
 	
 	// Call if defined
 	function callIfDefined( method , object , parameters ) {
-		method && method.apply( object , parameters );
+		method && method.apply( object.context || object , parameters );
 	}
 	
 	// Give joining character given url
@@ -38,6 +38,7 @@
 	
 	var // String constants (for better minification)
 		STR_ASYNC = "async",
+		STR_CHARSET = "charset",
 		STR_EMPTY = "",
 		STR_ERROR = "error",
 		STR_JQUERY_JSONP = "_jqjsp",
@@ -69,8 +70,10 @@
 			//cache: false,
 			callback: STR_JQUERY_JSONP,
 			//callbackParameter: undefined,
+			//charset: undefined,
 			//complete: undefined,
-			//data: ""
+			//context: undefined,
+			//data: "",
 			//dataFilter: undefined,
 			//error: undefined,
 			//pageCache: false,
@@ -93,6 +96,7 @@
 			successCallbackName = xOptions.callback,
 			cacheFlag = xOptions.cache,
 			pageCacheFlag = xOptions.pageCache,
+			charset = xOptions.charset,
 			url = xOptions.url,
 			data = xOptions.data,
 			timeout = xOptions.timeout,
@@ -194,6 +198,11 @@
 					// Create the script tag
 					script = $( STR_SCRIPT_TAG )[ 0 ];
 					script.id = STR_JQUERY_JSONP + count++;
+					
+					// Set charset if provided
+					if ( charset ) {
+						script[ STR_CHARSET ] = charset;
+					}
 					
 					// Callback function
 					function callback( result ) {
