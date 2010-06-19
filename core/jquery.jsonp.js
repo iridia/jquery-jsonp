@@ -1,5 +1,5 @@
 /*
- * jQuery JSONP Core Plugin 2.1.1 (2010-06-19)
+ * jQuery JSONP Core Plugin 2.1.2 (2010-06-20)
  * 
  * http://code.google.com/p/jquery-jsonp/
  *
@@ -28,7 +28,7 @@
 	
 	// Call if defined
 	function callIfDefined( method , object , parameters ) {
-		method && method.apply( object.context || object , parameters );
+		return method && method.apply( object.context || object , parameters );
 	}
 	
 	// Give joining character given url
@@ -102,9 +102,6 @@
 			timeout = xOptions.timeout,
 			pageCached,
 			
-			// References to beforeSend (for better minification)
-			beforeSendCallback = xOptions.beforeSend,
-		
 			// Abort/done flag
 			done = 0,
 			
@@ -117,8 +114,7 @@
 		};
 
 		// Call beforeSend if provided (early abort if false returned)
-		if ( beforeSendCallback
-			&& ( beforeSendCallback( xOptions , xOptions ) === false || done ) ) {
+		if ( callIfDefined( xOptions.beforeSend, xOptions , [ xOptions ] ) === false || done ) {
 			return xOptions;
 		}
 			

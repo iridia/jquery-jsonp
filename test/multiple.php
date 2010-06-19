@@ -30,14 +30,18 @@ if (!empty($_GET['attempt']))
             attempts_count = attempts.length,
             i;
 
-        for (i=0; i<attempts_count; ++i) {
+        for ( i=0 ; i < attempts_count + 3 ; ++i ) {
             // create a new scope to track the current state of "i"
-            (function() {
-                var j = i;
-
+            ( function ( j ) {
                 $.jsonp({
                     url: "?callback=?&attempt="+attempts[i],
                     context: $("#compares"),
+                    beforeSend: function() {
+                    	if ( j >= attempts_count ) {
+	                        this.append( "Request #" + j + " has been aborted<br />" );
+                    		return false;
+                    	}
+                    },
                     success: function( response ) {
                         var s = (response.attempt != attempts[j]) ? "FAIL" : "OK";
                         this.append(
@@ -48,7 +52,7 @@ if (!empty($_GET['attempt']))
                         $("#errors").append(err + "<br />");
                     }
                 });
-            }());
+            } )( i );
         }
     }());
     </script>
